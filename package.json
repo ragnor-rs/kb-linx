@@ -1,0 +1,9 @@
+{
+  "name": "KBLinx",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "neo4j": "0.2.19",
+    "async": "0.1.22"
+  }
+}
