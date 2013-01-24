@@ -1,5 +1,4 @@
 /*
- * TODO: prepare test graph with Gephi (with Neo4j NOT running)
  * TODO: i18n
  * TODO: add question answering method
  */
@@ -10,18 +9,34 @@ var async = require("async");
 
 var db = new neo4j.GraphDatabase('http://localhost:7474');
 
-var numNodes = 2;
-var prevNodeIndex;
+/**
+ * Get total number of nodes
+ */
+function getNodeCount(processCountFunc) {
+
+    var query = [
+        'START n=node(*)',
+        'RETURN count(n)'
+    ].join('\n');
+
+    db.query(query, {}, function (err, results) {
+        if (err) throw err;
+        var n = results[0]["count(n)"];
+        processCountFunc(n);
+    });
+
+}
 
 /**
  * Generates non-repeating node index
  */
-function getRndNodeIndex () {
+var prevNodeIndex = -1;
+function getRndNodeIndex(numNodes) {
 
     var rnd;
 
     while (true) {
-        rnd = Math.round(Math.random() * (numNodes - 1) + 1);
+        rnd = Math.round(Math.random() * (numNodes - 1));
         if (rnd != prevNodeIndex) {
             prevNodeIndex = rnd;
             return rnd;
@@ -33,7 +48,7 @@ function getRndNodeIndex () {
 /**
  * Asynchronously returns a node by index
  */
-function getNodeByIndex(i, cb) {
+function getNodeByIndex(i, processNodeFunc) {
 
     var query = [
         'START n=node(*)',
@@ -41,21 +56,15 @@ function getNodeByIndex(i, cb) {
         'SKIP {rnd} LIMIT 1'
     ].join('\n');
 
-    var params = {
-        rnd: i
-    };
-
-    db.query(query, params, function (err, results) {
+    db.query(query, {"rnd": i}, function (err, results) {
         if (err) throw err;
         var n = results[0]['n'];
-        cb(n);
+        processNodeFunc(n);
     });
 
 }
 
-var numOfOptions = 4;
-
-function makeNodeGetFunc(nodeIndex) {
+function createGetNodeTask(nodeIndex) {
     return function(cb) {
         getNodeByIndex(nodeIndex, function(n) {
             cb(null, n);
@@ -80,13 +89,10 @@ function generateResponse(nodeRequests, response) {
         var question = {options: new Array()};
 
         for (var i = 0; i < results.length; i++) {
-            question.options.push({
-                id: results[i].id,
-                name: results[i].name
-            });
+            question.options.push(results[i].data);
         }
 
-        response.writeHeader(200, {"Content-Type": "application/json"});
+        response.writeHeader(200, {"Content-Type": "application/json; charset=UTF-8"});
         response.write(JSON.stringify(question));
         response.end();
 
@@ -95,48 +101,54 @@ function generateResponse(nodeRequests, response) {
 
 http.createServer(function (request, response){
 
-    if (request.path != "question") {
+    if (request.url != "/question") {
         response.writeHeader(404, {"Content-Type": "text/plain"});
         response.write("Not found");
         response.end();
         return;
     }
 
-    var i;
+    getNodeCount(function(nodeCount) {
 
-    // choose node index 1
-    var masterNodeIndex = getRndNodeIndex();
+        var i;
 
-    /*
-     choose node indices 2..(numOfOptions + 1)
-     */
-    var slaveNodeIndices = new Array();
+        var numOfOptions = Math.min(nodeCount - 1, 4);
 
-    slaveNodeIndices.push(masterNodeIndex);
+        // choose node index 1
+        var masterNodeIndex = getRndNodeIndex(nodeCount);
 
-    for (i = 0; i < numOfOptions; i++) {
+        /*
+         choose node indices 2..(numOfOptions + 1)
+         */
+        var nodeIndices = new Array();
 
-        var nodeIndex = getRndNodeIndex();
+        nodeIndices.push(masterNodeIndex);
 
-        // eliminate repetitive indices
-        if (slaveNodeIndices.indexOf(nodeIndex) != -1) {
-            continue;
+        for (i = 0; i < numOfOptions; i++) {
+
+            var slaveNodeIndex = getRndNodeIndex(nodeCount);
+
+            // eliminate repetitive indices
+            if (nodeIndices.indexOf(slaveNodeIndex) != -1) {
+                continue;
+            }
+
+            nodeIndices.push(slaveNodeIndex);
+
         }
 
-        slaveNodeIndices.push(nodeIndex);
+        /*
+         run async.series() to get nodes
+         */
+        var nodeRequests = new Array();
 
-    }
+        for (i = 0; i < nodeIndices.length; i++) {
+            nodeRequests.push(createGetNodeTask(nodeIndices[i]));
+        }
 
-    /*
-     run async.series() to get nodes
-     */
-    var nodeRequests = new Array();
+        generateResponse(nodeRequests, response);
 
-    for (i = 0; i < slaveNodeIndices.length; i++) {
-        nodeRequests.push(makeNodeGetFunc(slaveNodeIndices[i]));
-    }
-
-    generateResponse(nodeRequests, response);
+    });
 
 }).listen(80);
 
