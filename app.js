@@ -49,24 +49,45 @@ function createGetNodeByIndexTask(nodeIndex) {
 
 function createGetNodeByIdTask(nodeId) {
     return function(cb) {
-        db.getNodeById(nodeId, function (err, n) {
-            if (err) throw err;
-            cb(null, n);
-        });
+        db.getNodeById(nodeId, cb);
     };
 }
 
 function createSaveRelationshipTask(n1, n2) {
     return function(cb) {
-        n1.createRelationshipFrom(n2, "is based on", {}, function (err, r) {
+        db.query('START a=node({id2}), b=node({id1})\nMATCH (a)-[r]->(b)\nRETURN r', {
+
+            "id1": n1.id,
+            "id2": n2.id
+
+        }, function (err, results) {
+
             if (err) throw err;
-            cb(null, r);
+
+            if (results.length == 0) {
+
+                // create new relationship
+                n1.createRelationshipFrom(n2, "is based on", {"strength": 1}, cb);
+
+            } else {
+
+                // relationship already exists - increase strength
+                var r = results[0]["r"];
+                if (r.data.strength) {
+                    r.data.strength++;
+                } else {
+                    r.data["strength"] = 1;
+                }
+                r.save(cb);
+
+            }
+
         });
     };
 }
 
 function loadNodesAndQuestion (nodeRequests, response) {
-    async.series(nodeRequests, function(err, results) {
+    async.parallel(nodeRequests, function(err, results) {
 
         if (err) {
             response.writeHeader(500, {"Content-Type": "text/plain"});
@@ -92,7 +113,7 @@ function loadNodesAndQuestion (nodeRequests, response) {
 }
 
 function saveRelationshipsAndNotify (relationshipSaveTasks, response) {
-    async.series(relationshipSaveTasks, function(err, results) {
+    async.parallel(relationshipSaveTasks, function(err, results) {
 
         if (err) {
             response.writeHeader(500, {"Content-Type": "text/plain"});
@@ -108,7 +129,7 @@ function saveRelationshipsAndNotify (relationshipSaveTasks, response) {
 }
 
 function loadNodesAndAnswer (nodeRequests, response) {
-    async.series(nodeRequests, function(err, results) {
+    async.parallel(nodeRequests, function(err, results) {
 
         if (err) {
             response.writeHeader(500, {"Content-Type": "text/plain"});
