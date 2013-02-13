@@ -11,7 +11,8 @@ var neo4j = require("neo4j");
 var async = require("async");
 var url = require('url');
 
-var db = new neo4j.GraphDatabase('http://localhost:7474');
+var neo4j_url = process.env.NEO4J_URL || 'http://localhost:7474';
+var db = new neo4j.GraphDatabase(neo4j_url);
 
 /**
  * Get total number of nodes
@@ -205,7 +206,7 @@ function submitAnswer(request, response) {
 
 }
 
-var port = process.env.PORT || 8080;
+var port = process.env.PORT || 80;
 http.createServer(function (request, response){
 
     if (request.url == "/getQuestion") {
