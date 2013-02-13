@@ -99,12 +99,18 @@ function loadNodesAndQuestion (nodeRequests, response) {
         }
 
         var question = {
-            target: results[0].data,
+            target: {
+				id: results[0].id,
+				label: results[0].data.label
+			},
             required: new Array()
         };
 
         for (var i = 1; i < results.length; i++) {
-            question.required.push(results[i].data);
+            question.required.push({
+				id: results[i].id,
+				label: results[i].data.label
+			});
         }
 
         response.writeHeader(200, {"Content-Type": "application/json; charset=UTF-8"});
