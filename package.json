@@ -4,8 +4,7 @@
     "private": true,
     "dependencies": {
         "neo4j": "0.2.19",
-        "async": "0.1.22",
-        "npm": "1.1.x"
+        "async": "0.1.22"
     },
     "engines": {
         "node": "0.8.x",
