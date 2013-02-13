@@ -1,8 +1,9 @@
 /*
- * DONE: question generation (http://localhost/getQuestion)
- * DONE: relationship creation (http://localhost/submitAnswer?target=3&required=4)
- * TODO: bot protection
- * TODO: i18n
+ * DONE question generation (http://localhost/getQuestion)
+ * DONE relationship creation (http://localhost/submitAnswer?target=3&required=4)
+ * TODO web interface
+ * TODO bot protection
+ * TODO i18n
  */
 
 var http = require("http");
