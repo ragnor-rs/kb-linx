@@ -1,6 +1,7 @@
 /*
  * DONE question generation (http://localhost/getQuestion)
  * DONE relationship creation (http://localhost/submitAnswer?target=3&required=4)
+ * TODO check vertex order during relationship creation!
  * TODO web interface
  * TODO bot protection
  * TODO i18n
