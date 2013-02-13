@@ -205,6 +205,7 @@ function submitAnswer(request, response) {
 
 }
 
+var port = process.env.PORT || 8080;
 http.createServer(function (request, response){
 
     if (request.url == "/getQuestion") {
@@ -217,6 +218,6 @@ http.createServer(function (request, response){
         response.end();
     }
 
-}).listen(8080);
+}).listen(port);
 
 console.log("The server is running...");
